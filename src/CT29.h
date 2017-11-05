@@ -44,4 +44,40 @@ struct vectorDatos {
 
 };
 
+struct elementoLista {
+
+	int t;
+	double T;
+
+};
+
+typedef enum {
+
+	L_Primero,
+	L_Siguiente,
+	L_Anterior
+
+} TMovimiento_Ls;
+
+typedef struct TNodoListaSimple {
+
+	void* Elem;
+	struct TNodoListaSimple *Siguiente;
+
+} TNodoListaSimple;
+
+typedef struct {
+
+	TNodoListaSimple *Primero, *Corriente;
+	int TamanioDato;
+
+} TListaSimple;
+
+int L_Vacia(TListaSimple Ls);
+void L_Elem_Cte (TListaSimple Ls, void *pE);
+int L_Mover_Cte (TListaSimple *pLs, TMovimiento_Ls M);
+void L_Vaciar (TListaSimple *pLs);
+
 struct vectorDatos cargarVectorDatos ();
+TListaSimple crearListaVI (double valorInicial);
+double euler (TListaSimple * lista, int h, struct vectorDatos datos);

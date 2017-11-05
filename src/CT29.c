@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
+#include <memory.h>
 
 #define NUMERODEPADRON 97429
 
@@ -78,11 +80,168 @@ void imprimirEnunciado (short enunciado) {
 
 }
 
+struct elementoLista {
+
+	int t;
+	double T;
+
+};
+
+// https://github.com/fiuba-7541/elemental ?
+/**
+ * Movimientos que va a manejar la estructura. Son de conocimiento público,
+ * pero sólo deberían usarse para el manejo puntual de esta estructura.
+ */
+typedef enum {
+
+	L_Primero,
+	L_Siguiente,
+	L_Anterior
+
+} TMovimiento_Ls;
+
+/**
+ * Estructura auxiliar de la lista simple. Es privada y no debe usarse bajo
+ * ningún concepto en la aplicación.
+ */
+typedef struct TNodoListaSimple {
+
+	void* Elem;
+	struct TNodoListaSimple *Siguiente;
+
+} TNodoListaSimple;
+
+/**
+ * Estructura cabecera, este es el tipo que se deberá instanciar, aunque
+ * nunca acceder a sus campos.
+ */
+typedef struct {
+
+	TNodoListaSimple *Primero, *Corriente;
+	int TamanioDato;
+
+} TListaSimple;
+
+void L_Crear (TListaSimple *pLs, int TamanioDato) {
+
+	pLs->Corriente = NULL;
+	pLs->Primero = NULL;
+	pLs->TamanioDato = TamanioDato;
+
+}
+
+void L_Vaciar (TListaSimple *pLs) {
+
+	TNodoListaSimple *pNodo, *Siguiente;
+
+	for(pNodo = pLs->Primero; (pNodo); pNodo = Siguiente) {
+
+		Siguiente = pNodo->Siguiente;
+
+		free(pNodo->Elem);
+		free(pNodo);
+
+	}
+
+	pLs->Primero = pLs->Corriente = NULL;
+
+}
+
+int L_Vacia (TListaSimple Ls) {
+
+	if (Ls.Primero == NULL)
+		return TRUE;
+
+	return FALSE;
+
+}
+
+void L_Elem_Cte (TListaSimple Ls, void *pE) {
+
+	memcpy(pE, Ls.Corriente->Elem, Ls.TamanioDato);
+
+}
+
+int L_Mover_Cte (TListaSimple *pLs, TMovimiento_Ls M) {
+
+	switch (M) {
+
+		case L_Primero:
+			pLs->Corriente = pLs->Primero;
+
+			break;
+
+		case L_Siguiente:
+			if (pLs->Corriente->Siguiente == NULL)
+				return FALSE;
+			else
+				pLs->Corriente = pLs->Corriente->Siguiente;
+
+			break;
+
+		case L_Anterior:return FALSE;
+
+	}
+
+	return TRUE;
+
+}
+
+int L_Insertar_Cte (TListaSimple *pLs, TMovimiento_Ls M, void* pE) {
+
+	TNodoListaSimple *pNodo = (TNodoListaSimple*) malloc(sizeof(TNodoListaSimple));
+
+	if (!pNodo)
+		return FALSE; /* No hay memoria disponible */
+
+	pNodo->Elem = malloc (pLs->TamanioDato);
+
+	if(!pNodo->Elem) {
+
+		free(pNodo);
+
+		return FALSE;
+
+	}
+
+	memcpy(pNodo->Elem, pE, pLs->TamanioDato);
+
+	if ((pLs->Primero == NULL) || (M == L_Primero) || ((M == L_Anterior) && (pLs->Primero == pLs->Corriente))) {
+
+		/*Si está vacía o hay que insertar en el Primero o
+		hay que insertar en el Anterior y el actual es el Primero */
+		pNodo->Siguiente = pLs->Primero;
+		pLs->Primero = pLs->Corriente = pNodo;
+
+	} else {
+
+		/* Siempre inserto como siguiente, el nodo nuevo, porque es más fácil */
+		pNodo->Siguiente = pLs->Corriente->Siguiente;
+		pLs->Corriente->Siguiente = pNodo;
+
+		if (M == L_Anterior) {
+
+			/* Pero cuando el movimiento es Anterior, entonces swapeo los
+			 * elementos */
+			void* tmp = pNodo->Elem;
+			pNodo->Elem = pLs->Corriente->Elem;
+			pLs->Corriente->Elem = tmp;
+
+		}
+
+	}
+
+	pLs->Corriente = pNodo;
+
+	return TRUE;
+
+}
+
 struct vectorDatos cargarVectorDatos () {
 
 	struct vectorDatos aux;
 
-	aux.temperaturaInicial		= 20;
+	aux.temperaturaInicial		= 20 + 273;
 	aux.densidad				= 7850;
 	aux.calorEspecifico			= 480;
 	aux.diametroExterno			= 244.48 / 1000;
@@ -98,11 +257,14 @@ struct vectorDatos cargarVectorDatos () {
 
 	aux.masa			= aux.densidad * PI * aux.diametroExterno * aux.espesor \
 							* (1 - aux.espesor / aux.diametroExterno) * aux.longitudTubo;
+
 	// 2πh(r1+r2) + 2π(r1^2-r2^2)
 	aux.superficie		= 2 * PI * (aux.diametroExterno / 2 * (aux.longitudTubo + aux.diametroExterno / 2) \
 							+ (aux.diametroExterno / 2 - aux.espesor) \
 							* (aux.longitudTubo - (aux.diametroExterno / 2 - aux.espesor)));
+
 	aux.velocidad		= aux.longitudHorno / (aux.bolsillos * aux.cadencia);
+
 	aux.tiempoEnElHorno	= aux.bolsillos * aux.cadencia;
 
 	return aux;
@@ -131,16 +293,59 @@ double fConveccion (double Tn, struct vectorDatos datos) {
 
 }
 
-double euler (double Tn, int t, int h, struct vectorDatos datos) {
+// PRE: Lista no vacia
+double euler (TListaSimple * lista, int h, struct vectorDatos datos) {
 
-	double Tn1 = Tn + h * fConveccion(Tn, datos);
+	struct elementoLista n;
+	L_Elem_Cte(*lista, &n);
 
-	printf("%d -> %F\n", t, Tn1);
+	struct elementoLista n1;
+	n1.t = n.t + h;
+	n1.T = n.T + h * fConveccion(n.T, datos);
 
-	if (t < datos.tiempoEnElHorno)
-		return euler(Tn1, t + h, h, datos);
+	L_Insertar_Cte(lista, L_Siguiente, &n1);
 
-	return Tn1;
+	if (n1.t < datos.tiempoEnElHorno)
+		return euler(lista, h, datos);
+
+	return TRUE;
+
+}
+
+void imprimirLista (TListaSimple lista) {
+
+	if (L_Vacia(lista) == FALSE) {
+
+		int retorno = L_Mover_Cte(&lista, L_Primero);
+
+		struct elementoLista elem;
+
+		while (retorno == TRUE) {
+
+			L_Elem_Cte(lista, &elem);
+
+			printf("T(%d) = %F\n", elem.t, elem.T);
+
+			retorno = L_Mover_Cte(&lista, L_Siguiente);
+
+		}
+
+	}
+
+}
+
+TListaSimple crearListaVI (double valorInicial) {
+
+	TListaSimple lista;
+	L_Crear(&lista, sizeof(struct elementoLista));
+
+	struct elementoLista vInicial;
+	vInicial.t = 0;
+	vInicial.T = valorInicial;
+
+	L_Insertar_Cte(&lista, L_Primero, &vInicial);
+
+	return lista;
 
 }
 
@@ -148,9 +353,15 @@ int resolverConveccion () {
 
 	struct vectorDatos datos = cargarVectorDatos();
 
+	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
+
 	int h = buscarEstabilidad(datos);
 
-	euler(20, 1, h, datos);
+	euler(&lista, h, datos);
+
+	imprimirLista(lista);
+
+	L_Vaciar(&lista);
 
 	return TRUE;
 
