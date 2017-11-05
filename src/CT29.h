@@ -22,8 +22,6 @@ struct vectorDatos {
 	float diametroExterno;
 	float espesor;
 	int longitudTubo;
-	double masa;
-	double superficie;
 
 	// Geometría del horno
 	int longitudHorno;
@@ -37,6 +35,12 @@ struct vectorDatos {
 	// Parámetros de la transferencia de calor
 	int coeficienteConveccion;
 	float factorEmisividad;
+
+	// Auxiliares
+	double masa;
+	double superficie;
+	float velocidad;
+	int tiempoEnElHorno;
 
 };
 
