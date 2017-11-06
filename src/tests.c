@@ -41,7 +41,7 @@ TEST testEulerConveccion (void) {
 
 	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
 
-	euler(&lista, 1 /* h */, datos);
+	euler(fConveccion, &lista, 1 /* h */, datos);
 
 	GREATEST_ASSERT(L_Vacia(lista) == FALSE);
 
@@ -71,7 +71,7 @@ TEST testRKConveccion (void) {
 
 	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
 
-	rungeKutta(&lista, 1 /* h */, datos);
+	rungeKutta(fConveccion, &lista, 1 /* h */, datos);
 
 	GREATEST_ASSERT(L_Vacia(lista) == FALSE);
 

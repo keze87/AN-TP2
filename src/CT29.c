@@ -277,48 +277,48 @@ int buscarEstabilidad (struct vectorDatos datos) {
 
 }
 
-double fConveccion (double Tn, struct vectorDatos datos) {
+double fConveccion (double Tn, struct vectorDatos d /* datos */) {
 
 	int Tinfinito;
 
-	if (Tn * datos.velocidad > datos.longitudHorno / 2)
+	if (Tn * d.velocidad > d.longitudHorno / 2)
 
-		Tinfinito = datos.temperaturaDos;
+		Tinfinito = d.temperaturaDos;
 
 	else
 
-		Tinfinito = datos.temperaturaUno;
+		Tinfinito = d.temperaturaUno;
 
-	return - datos.coeficienteConveccion * datos.superficie * (Tn - Tinfinito) / (datos.masa * datos.calorEspecifico);
+	return - d.coeficienteConveccion * d.superficie * (Tn - Tinfinito) / (d.masa * d.calorEspecifico);
 
 }
 
 // PRE: Lista no vacia
-void euler (TListaSimple * lista, int h, struct vectorDatos datos) {
+void euler (double (*funcion)(double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
 
 	struct elementoLista n;
 	L_Elem_Cte(*lista, &n);
 
 	struct elementoLista n1;
 	n1.t = n.t + h;
-	n1.T = n.T + h * fConveccion(n.T, datos);
+	n1.T = n.T + h * funcion(n.T, datos);
 
 	L_Insertar_Cte(lista, L_Siguiente, &n1);
 
 	if (n1.t < datos.tiempoEnElHorno)
-		euler(lista, h, datos);
+		euler(funcion, lista, h, datos);
 
 }
 
-void rungeKutta (TListaSimple * lista, int h, struct vectorDatos datos) {
+void rungeKutta (double (*funcion)(double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
 
 	struct elementoLista n;
 	L_Elem_Cte(*lista, &n);
 
-	double k1 = fConveccion(n.T,				datos);
-	double k2 = fConveccion(n.T + h * k1 /2,	datos);
-	double k3 = fConveccion(n.T + h * k2 /2,	datos);
-	double k4 = fConveccion(n.T + h * k3,		datos);
+	double k1 = funcion(n.T,				datos);
+	double k2 = funcion(n.T + h * k1 /2,	datos);
+	double k3 = funcion(n.T + h * k2 /2,	datos);
+	double k4 = funcion(n.T + h * k3,		datos);
 
 	struct elementoLista n1;
 	n1.t = n.t + h;
@@ -327,7 +327,7 @@ void rungeKutta (TListaSimple * lista, int h, struct vectorDatos datos) {
 	L_Insertar_Cte(lista, L_Siguiente, &n1);
 
 	if (n1.t < datos.tiempoEnElHorno)
-		rungeKutta(lista, h, datos);
+		rungeKutta(funcion, lista, h, datos);
 
 }
 
@@ -372,7 +372,7 @@ TListaSimple crearListaVI (double valorInicial) {
 
 }
 
-int resolverConveccion () {
+void resolverConveccion () {
 
 	struct vectorDatos datos = cargarVectorDatos();
 
@@ -381,7 +381,7 @@ int resolverConveccion () {
 
 	int h = buscarEstabilidad(datos);
 
-	euler(&lista, h, datos);
+	euler(fConveccion, &lista, h, datos);
 
 	printf("Método de Euler:\n\n");
 
@@ -394,7 +394,7 @@ int resolverConveccion () {
 
 	h = buscarEstabilidad(datos);
 
-	rungeKutta(&lista, h, datos);
+	rungeKutta(fConveccion, &lista, h, datos);
 
 	printf("\nMétodo de Runge Kutta:\n\n");
 
@@ -402,7 +402,53 @@ int resolverConveccion () {
 
 	L_Vaciar(&lista);
 
-	return TRUE;
+}
+
+double fConveccionRadiaccion (double Tn, struct vectorDatos d /* datos */) {
+
+	int Tinfinito;
+
+	if (Tn * d.velocidad > d.longitudHorno / 2)
+
+		Tinfinito = d.temperaturaDos;
+
+	else
+
+		Tinfinito = d.temperaturaUno;
+
+	return (d.coeficienteConveccion * d.superficie * (Tn - Tinfinito) \
+			+ STEFANBOLTZMANN * d.factorEmisividad * d.superficie * (pow(Tn, 4) - pow(Tinfinito, 4))) \
+			/ (- d.masa * d.calorEspecifico);
+
+}
+
+void resolverConveccionYRadiaccion () {
+
+	struct vectorDatos datos = cargarVectorDatos();
+
+	TListaSimple lista;
+	int h;
+
+	/* Euler
+	lista = crearListaVI(datos.temperaturaInicial);
+	h = buscarEstabilidad(datos);
+	euler(fConveccion, &lista, h, datos);
+	printf("Método de Euler:\n\n");
+	imprimirLista(lista);
+	L_Vaciar(&lista);*/
+
+	// RK
+	lista = crearListaVI(datos.temperaturaInicial);
+
+	h = buscarEstabilidad(datos);
+
+	rungeKutta(fConveccionRadiaccion, &lista, h, datos);
+
+	printf("\nMétodo de Runge Kutta:\n\n");
+
+	imprimirLista(lista);
+
+	L_Vaciar(&lista);
 
 }
 
@@ -412,7 +458,7 @@ int proceso () {
 	resolverConveccion();
 
 	imprimirEnunciado(2);
-
+	resolverConveccionYRadiaccion();
 
 	//imprimirEnunciado(3);
 
