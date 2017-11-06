@@ -66,7 +66,7 @@ void imprimirEnunciado (short enunciado) {
 
 		case 3:
 			printf("\n3) Encontrar manualmente una combinación de T1 y T2 para que el soaking sea de 10 minutos manteniendo\n");
-			printf("la temperatura objetivo T sk obtenida en el ítem 2. La tolerancia para el soaking es de ±1min.\n\n");
+			printf("la temperatura objetivo Tsk obtenida en el ítem 2. La tolerancia para el soaking es de ±1min.\n\n");
 			break;
 
 		case 4:
@@ -270,7 +270,7 @@ struct vectorDatos cargarVectorDatos () {
 							+ (aux.diametroExterno / 2 - aux.espesor) \
 							* (aux.longitudTubo - (aux.diametroExterno / 2 - aux.espesor)));
 
-	aux.velocidad		= aux.longitudHorno / (aux.bolsillos * aux.cadencia);
+	aux.velocidad		= (float) aux.longitudHorno / (aux.bolsillos * aux.cadencia);
 
 	aux.tiempoEnElHorno	= aux.bolsillos * aux.cadencia;
 
@@ -284,11 +284,11 @@ int buscarEstabilidad (struct vectorDatos datos) {
 
 }
 
-double fConveccion (double Tn, struct vectorDatos d /* datos */) {
+double fConveccion (int t, double Tn, struct vectorDatos d /* datos */) {
 
 	int Tinfinito;
 
-	if (Tn * d.velocidad > d.longitudHorno / 2)
+	if (t * d.velocidad > d.longitudHorno / 2)
 
 		Tinfinito = d.temperaturaDos;
 
@@ -301,14 +301,14 @@ double fConveccion (double Tn, struct vectorDatos d /* datos */) {
 }
 
 // PRE: Lista no vacia
-void euler (double (* funcion)(double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
+void euler (double (* funcion)(int, double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
 
 	struct elementoLista n;
 	L_Elem_Cte(* lista, &n);
 
 	struct elementoLista n1;
 	n1.t = n.t + h;
-	n1.T = n.T + h * funcion(n.T, datos);
+	n1.T = n.T + h * funcion(n.t, n.T, datos);
 
 	L_Insertar_Cte(lista, L_Siguiente, & n1);
 
@@ -317,15 +317,15 @@ void euler (double (* funcion)(double, struct vectorDatos), TListaSimple * lista
 
 }
 
-void rungeKutta (double (*funcion)(double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
+void rungeKutta (double (* funcion)(int, double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
 
 	struct elementoLista n;
 	L_Elem_Cte(* lista, & n);
 
-	double k1 = funcion(n.T,				datos);
-	double k2 = funcion(n.T + h * k1 /2,	datos);
-	double k3 = funcion(n.T + h * k2 /2,	datos);
-	double k4 = funcion(n.T + h * k3,		datos);
+	double k1 = funcion(n.t, n.T,						datos);
+	double k2 = funcion(n.t + h / 2, n.T + h * k1 /2,	datos);
+	double k3 = funcion(n.t + h / 2, n.T + h * k2 /2,	datos);
+	double k4 = funcion(n.t + h, n.T + h * k3,			datos);
 
 	struct elementoLista n1;
 	n1.t = n.t + h;
@@ -379,10 +379,7 @@ TListaSimple crearListaVI (double valorInicial) {
 
 }
 
-void resolverConveccion () {
-
-	struct vectorDatos datos = cargarVectorDatos();
-
+void resolverConveccion (struct vectorDatos datos) {
 
 	printf("Método de Euler:\n\n");
 
@@ -411,11 +408,11 @@ void resolverConveccion () {
 
 }
 
-double fConveccionRadiaccion (double Tn, struct vectorDatos d /* datos */) {
+double fConveccionRadiaccion (int t, double Tn, struct vectorDatos d /* datos */) {
 
 	int Tinfinito;
 
-	if (Tn * d.velocidad > d.longitudHorno / 2)
+	if (t * d.velocidad > d.longitudHorno / 2)
 
 		Tinfinito = d.temperaturaDos;
 
@@ -458,22 +455,45 @@ int buscarSoaking (TListaSimple * lista) {
 			soaking.T = aux.T;
 			soaking.t = aux.t;
 
-		} else
+		} else {
+
+			retorno = L_Mover_Cte(lista, L_Siguiente); // Pongo el cte en Sk
+			L_Elem_Cte(* lista, & aux);
+
 			break;
+
+		}
 
 		retorno = L_Mover_Cte(lista, L_Anterior);
 
 	}
 
-	printf("\nSk = %d seg a (%F)\n", soaking.t, soaking.T - 273);
+	printf("\nSk = %d +/- 1 minutos\n", (int) soaking.t / 60);
+
+	if ((aux.t != soaking.t) || (aux.T != soaking.T) || (retorno != TRUE))
+		return FALSE;
+
+	int n = 0;
+	double Tsk = 0;
+
+	while (retorno == TRUE) {
+
+		L_Elem_Cte(* lista, & aux);
+
+		Tsk = Tsk + aux.T;
+		n++;
+
+		retorno = L_Mover_Cte(lista, L_Siguiente);
+
+	}
+
+	printf("\nTsk = %.3F +/-  ºK\n", (Tsk / n) - 273); //TODO
 
 	return TRUE;
 
 }
 
-void resolverConveccionYRadiaccion () {
-
-	struct vectorDatos datos = cargarVectorDatos();
+void resolverConveccionYRadiaccion (struct vectorDatos datos) {
 
 	TListaSimple lista;
 	int h;
@@ -481,9 +501,9 @@ void resolverConveccionYRadiaccion () {
 	/* printf("Método de Euler:\n\n");
 	lista = crearListaVI(datos.temperaturaInicial);
 	h = buscarEstabilidad(datos);
-	euler(fConveccion, &lista, h, datos);
+	euler(fConveccionRadiaccion, &lista, h, datos);
 	imprimirLista(lista);
-	L_Vaciar(&lista);*/
+	L_Vaciar(&lista); */
 
 	printf("\nMétodo de Runge Kutta:\n\n");
 
@@ -501,16 +521,29 @@ void resolverConveccionYRadiaccion () {
 
 }
 
+void buscarManualmenteT1YT2 (struct vectorDatos datos) {
+
+	printf("Pruebo con T1 = 536 ºC y T2 = 489 ºC\n");
+
+	datos.temperaturaUno = 536 + 273;
+	datos.temperaturaDos = 489 + 273;
+
+	resolverConveccionYRadiaccion(datos);
+
+}
+
 int proceso () {
 
+	struct vectorDatos datos = cargarVectorDatos ();
+
 	imprimirEnunciado(1);
-	resolverConveccion();
+	resolverConveccion(datos);
 
 	imprimirEnunciado(2);
-	resolverConveccionYRadiaccion();
+	resolverConveccionYRadiaccion(datos);
 
-	//imprimirEnunciado(3);
-
+	imprimirEnunciado(3);
+	buscarManualmenteT1YT2(datos);
 
 	//imprimirEnunciado(4);
 

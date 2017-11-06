@@ -21,7 +21,7 @@ TEST testCargarDatos (void) {
 
 	GREATEST_ASSERT_IN_RANGE(aux.masa,			944.65123, 0.00003);
 	GREATEST_ASSERT_IN_RANGE(aux.superficie,	17.4099026, 0.000001);
-	GREATEST_ASSERT_IN_RANGE(aux.velocidad,		1 / 35, 0.000001);
+	GREATEST_ASSERT_IN_RANGE(aux.velocidad,		(float) 1 / 35, 0.000000001);
 	GREATEST_ASSERT_EQ(aux.tiempoEnElHorno,		1750);
 
 	PASS();
