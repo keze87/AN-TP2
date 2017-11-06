@@ -62,24 +62,24 @@ typedef enum {
 typedef struct TNodoListaSimple {
 
 	void* Elem;
-	struct TNodoListaSimple *Siguiente;
+	struct TNodoListaSimple * Siguiente, * Anterior;
 
 } TNodoListaSimple;
 
 typedef struct {
 
-	TNodoListaSimple *Primero, *Corriente;
+	TNodoListaSimple * Primero, * Corriente;
 	int TamanioDato;
 
 } TListaSimple;
 
 int L_Vacia(TListaSimple Ls);
-void L_Elem_Cte (TListaSimple Ls, void *pE);
-int L_Mover_Cte (TListaSimple *pLs, TMovimiento_Ls M);
-void L_Vaciar (TListaSimple *pLs);
+void L_Elem_Cte (TListaSimple Ls, void * pE);
+int L_Mover_Cte (TListaSimple * pLs, TMovimiento_Ls M);
+void L_Vaciar (TListaSimple * pLs);
 
 struct vectorDatos cargarVectorDatos ();
 TListaSimple crearListaVI (double valorInicial);
-void euler (double (*funcion)(double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos);
-void rungeKutta (double (*funcion)(double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos);
+void euler (double (* funcion)(double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos);
+void rungeKutta (double (* funcion)(double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos);
 double fConveccion (double Tn, struct vectorDatos datos);
