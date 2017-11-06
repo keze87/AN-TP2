@@ -196,7 +196,7 @@ int L_Insertar_Cte (TListaSimple *pLs, TMovimiento_Ls M, void* pE) {
 
 	pNodo->Elem = malloc (pLs->TamanioDato);
 
-	if(!pNodo->Elem) {
+	if (!pNodo->Elem) {
 
 		free(pNodo);
 
@@ -249,9 +249,9 @@ struct vectorDatos cargarVectorDatos () {
 	aux.longitudTubo			= 12;
 	aux.longitudHorno			= 50;
 	aux.bolsillos				= 50;
-	aux.cadencia				= round( 35 -  10 / (10000 * (NUMERODEPADRON - 90000)));
-	aux.temperaturaUno			= round(500 + 200 / (10000 * (NUMERODEPADRON - 90000))) + 273;
-	aux.temperaturaDos			= round(500 + 200 / (10000 * (NUMERODEPADRON - 90000))) + 273;
+	aux.cadencia				= round( 35 -  10 / 10000 * (NUMERODEPADRON - 90000));
+	aux.temperaturaUno			= round(500 + 200 / 10000 * (NUMERODEPADRON - 90000)) + 273;
+	aux.temperaturaDos			= round(500 + 200 / 10000 * (NUMERODEPADRON - 90000)) + 273;
 	aux.coeficienteConveccion	= 20;
 	aux.factorEmisividad		= 0.85;
 
@@ -294,7 +294,7 @@ double fConveccion (double Tn, struct vectorDatos datos) {
 }
 
 // PRE: Lista no vacia
-double euler (TListaSimple * lista, int h, struct vectorDatos datos) {
+void euler (TListaSimple * lista, int h, struct vectorDatos datos) {
 
 	struct elementoLista n;
 	L_Elem_Cte(*lista, &n);
@@ -306,9 +306,28 @@ double euler (TListaSimple * lista, int h, struct vectorDatos datos) {
 	L_Insertar_Cte(lista, L_Siguiente, &n1);
 
 	if (n1.t < datos.tiempoEnElHorno)
-		return euler(lista, h, datos);
+		euler(lista, h, datos);
 
-	return TRUE;
+}
+
+void rungeKutta (TListaSimple * lista, int h, struct vectorDatos datos) {
+
+	struct elementoLista n;
+	L_Elem_Cte(*lista, &n);
+
+	double k1 = fConveccion(n.T,				datos);
+	double k2 = fConveccion(n.T + h * k1 /2,	datos);
+	double k3 = fConveccion(n.T + h * k2 /2,	datos);
+	double k4 = fConveccion(n.T + h * k3,		datos);
+
+	struct elementoLista n1;
+	n1.t = n.t + h;
+	n1.T = n.T + h * (k1 / 6 + k2 / 3 + k3 / 3 + k4 / 6);
+
+	L_Insertar_Cte(lista, L_Siguiente, &n1);
+
+	if (n1.t < datos.tiempoEnElHorno)
+		rungeKutta(lista, h, datos);
 
 }
 
@@ -324,11 +343,15 @@ void imprimirLista (TListaSimple lista) {
 
 			L_Elem_Cte(lista, &elem);
 
-			printf("T(%d) = %F\n", elem.t, elem.T);
+			if ((float) elem.t / 60 == (int) (elem.t / 60)) // Solo imprimo cada 1 minuto
+				printf("T(%d) = %.3F\n", (int) elem.t / 60, elem.T - 273);
 
 			retorno = L_Mover_Cte(&lista, L_Siguiente);
 
 		}
+
+		if ((float) elem.t / 60 != (int) (elem.t / 60)) // Si no imprimí el ultimo, lo imprimo
+			printf("T(%d+) = %.3F\n", (int) elem.t / 60, elem.T - 273);
 
 	}
 
@@ -353,11 +376,27 @@ int resolverConveccion () {
 
 	struct vectorDatos datos = cargarVectorDatos();
 
+	// Euler
 	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
 
 	int h = buscarEstabilidad(datos);
 
 	euler(&lista, h, datos);
+
+	printf("Método de Euler:\n\n");
+
+	imprimirLista(lista);
+
+	L_Vaciar(&lista);
+
+	// RK
+	lista = crearListaVI(datos.temperaturaInicial);
+
+	h = buscarEstabilidad(datos);
+
+	rungeKutta(&lista, h, datos);
+
+	printf("\nMétodo de Runge Kutta:\n\n");
 
 	imprimirLista(lista);
 
@@ -372,7 +411,7 @@ int proceso () {
 	imprimirEnunciado(1);
 	resolverConveccion();
 
-	//imprimirEnunciado(2);
+	imprimirEnunciado(2);
 
 
 	//imprimirEnunciado(3);

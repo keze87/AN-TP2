@@ -41,7 +41,7 @@ TEST testEulerConveccion (void) {
 
 	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
 
-	euler(&lista, 1, datos);
+	euler(&lista, 1 /* h */, datos);
 
 	GREATEST_ASSERT(L_Vacia(lista) == FALSE);
 
@@ -65,6 +65,36 @@ TEST testEulerConveccion (void) {
 
 }
 
+TEST testRKConveccion (void) {
+
+	struct vectorDatos datos = cargarVectorDatos();
+
+	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
+
+	rungeKutta(&lista, 1 /* h */, datos);
+
+	GREATEST_ASSERT(L_Vacia(lista) == FALSE);
+
+	int retorno = L_Mover_Cte(&lista, L_Primero);
+
+	while (retorno == TRUE) {
+
+		struct elementoLista elem;
+
+		L_Elem_Cte(lista, &elem);
+
+		GREATEST_ASSERT_IN_RANGE(elem.T, solucionAnalitica(elem.t, datos), 0.00000000001);
+
+		retorno = L_Mover_Cte(&lista, L_Siguiente);
+
+	}
+
+	L_Vaciar(&lista);
+
+	PASS();
+
+}
+
 // Main de pruebas unitarias:
 GREATEST_MAIN_DEFS();
 
@@ -74,6 +104,7 @@ int correrTests () {
 
 	RUN_TEST(testCargarDatos);
 	RUN_TEST(testEulerConveccion);
+	RUN_TEST(testRKConveccion);
 
 	GREATEST_MAIN_END();
 

@@ -80,4 +80,5 @@ void L_Vaciar (TListaSimple *pLs);
 
 struct vectorDatos cargarVectorDatos ();
 TListaSimple crearListaVI (double valorInicial);
-double euler (TListaSimple * lista, int h, struct vectorDatos datos);
+void euler (TListaSimple * lista, int h, struct vectorDatos datos);
+void rungeKutta (TListaSimple * lista, int h, struct vectorDatos datos);
