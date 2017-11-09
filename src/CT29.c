@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <string.h>
 
 #define NUMERODEPADRON 97429
 
@@ -256,19 +257,16 @@ struct vectorDatos cargarVectorDatos () {
 	aux.longitudTubo			= 12;
 	aux.longitudHorno			= 50;
 	aux.bolsillos				= 50;
-	aux.cadencia				= round( 35 -  10 / 10000 * (NUMERODEPADRON - 90000));
-	aux.temperaturaUno			= round(500 + 200 / 10000 * (NUMERODEPADRON - 90000)) + 273;
-	aux.temperaturaDos			= round(500 + 200 / 10000 * (NUMERODEPADRON - 90000)) + 273;
+	aux.cadencia				= round( 35 - (float)  10 / 10000 * (NUMERODEPADRON - 90000));
+	aux.temperaturaUno			= round(500 + (float) 200 / 10000 * (NUMERODEPADRON - 90000)) + 273;
+	aux.temperaturaDos			= round(500 + (float) 200 / 10000 * (NUMERODEPADRON - 90000)) + 273;
 	aux.coeficienteConveccion	= 20;
 	aux.factorEmisividad		= 0.85;
 
 	aux.masa			= aux.densidad * PI * aux.diametroExterno * aux.espesor \
 							* (1 - aux.espesor / aux.diametroExterno) * aux.longitudTubo;
 
-	// 2πh(r1+r2) + 2π(r1^2-r2^2)
-	aux.superficie		= 2 * PI * (aux.diametroExterno / 2 * (aux.longitudTubo + aux.diametroExterno / 2) \
-							+ (aux.diametroExterno / 2 - aux.espesor) \
-							* (aux.longitudTubo - (aux.diametroExterno / 2 - aux.espesor)));
+	aux.superficie		= PI * aux.diametroExterno * aux.longitudTubo;
 
 	aux.velocidad		= (float) aux.longitudHorno / (aux.bolsillos * aux.cadencia);
 
@@ -280,7 +278,7 @@ struct vectorDatos cargarVectorDatos () {
 
 int buscarEstabilidad (struct vectorDatos datos) {
 
-	return 1; //TODO
+	return datos.cadencia; // WONTFIX
 
 }
 
@@ -306,14 +304,18 @@ void euler (double (* funcion)(int, double, struct vectorDatos), TListaSimple * 
 	struct elementoLista n;
 	L_Elem_Cte(* lista, &n);
 
-	struct elementoLista n1;
-	n1.t = n.t + h;
-	n1.T = n.T + h * funcion(n.t, n.T, datos);
+	while (n.t < datos.tiempoEnElHorno) {
 
-	L_Insertar_Cte(lista, L_Siguiente, & n1);
+		struct elementoLista n1;
+		n1.t = n.t + h;
+		n1.T = n.T + h * funcion(n.t, n.T, datos);
 
-	if (n1.t < datos.tiempoEnElHorno)
-		euler(funcion, lista, h, datos);
+		L_Insertar_Cte(lista, L_Siguiente, & n1);
+
+		n.t = n1.t;
+		n.T = n1.T;
+
+	}
 
 }
 
@@ -322,19 +324,52 @@ void rungeKutta (double (* funcion)(int, double, struct vectorDatos), TListaSimp
 	struct elementoLista n;
 	L_Elem_Cte(* lista, & n);
 
-	double k1 = funcion(n.t, n.T,						datos);
-	double k2 = funcion(n.t + h / 2, n.T + h * k1 /2,	datos);
-	double k3 = funcion(n.t + h / 2, n.T + h * k2 /2,	datos);
-	double k4 = funcion(n.t + h, n.T + h * k3,			datos);
+	while (n.t < datos.tiempoEnElHorno) {
 
-	struct elementoLista n1;
-	n1.t = n.t + h;
-	n1.T = n.T + h * (k1 / 6 + k2 / 3 + k3 / 3 + k4 / 6);
+		double k1 = funcion(n.t, n.T,						datos);
+		double k2 = funcion(n.t + h / 2, n.T + h * k1 /2,	datos);
+		double k3 = funcion(n.t + h / 2, n.T + h * k2 /2,	datos);
+		double k4 = funcion(n.t + h, n.T + h * k3,			datos);
 
-	L_Insertar_Cte(lista, L_Siguiente, &n1);
+		struct elementoLista n1;
+		n1.t = n.t + h;
+		n1.T = n.T + h * (k1 / 6 + k2 / 3 + k3 / 3 + k4 / 6);
 
-	if (n1.t < datos.tiempoEnElHorno)
-		rungeKutta(funcion, lista, h, datos);
+		L_Insertar_Cte(lista, L_Siguiente, &n1);
+
+		n.t = n1.t;
+		n.T = n1.T;
+
+	}
+
+}
+
+char * segAMinutos (int segundos) {
+
+	char auxM[40];
+	char auxR[40];
+
+	int minutos = (int) segundos / 60;
+	int resto = (int) segundos - minutos * 60;
+
+	snprintf(auxM, 40, "%d", minutos);
+	snprintf(auxR, 40, "%d", resto);
+
+	char * retorno = malloc(sizeof(char) * (10 + strlen(auxM) + strlen(auxR)));
+
+	strcpy(retorno, auxM);
+	strcat(retorno, " min");
+
+	strcat(retorno, " ");
+
+	if (resto < 10)
+		strcat(retorno, " ");
+
+	strcat(retorno, auxR);
+
+	strcat(retorno, " s");
+
+	return retorno;
 
 }
 
@@ -350,15 +385,15 @@ void imprimirLista (TListaSimple lista) {
 
 			L_Elem_Cte(lista, & elem);
 
-			if ((float) elem.t / 60 == (int) (elem.t / 60)) // Solo imprimo cada 1 minuto
-				printf("T(%d) = %.3F\n", (int) elem.t / 60, elem.T - 273);
+			char * auxTiempo = segAMinutos(elem.t);
+
+			printf("T(%s) = %.3F\n", auxTiempo, elem.T - 273);
+
+			free(auxTiempo);
 
 			retorno = L_Mover_Cte(&lista, L_Siguiente);
 
 		}
-
-		if ((float) elem.t / 60 != (int) (elem.t / 60)) // Si no imprimí el ultimo, lo imprimo
-			printf("T(%d+) = %.3F\n", (int) elem.t / 60, elem.T - 273);
 
 	}
 
@@ -426,7 +461,7 @@ double fConveccionRadiaccion (int t, double Tn, struct vectorDatos d /* datos */
 
 }
 
-int buscarSoaking (TListaSimple * lista) {
+int buscarSk (TListaSimple * lista) {
 
 	if (L_Vacia(* lista) == TRUE)
 		return FALSE;
@@ -450,6 +485,8 @@ int buscarSoaking (TListaSimple * lista) {
 
 		L_Elem_Cte(* lista, & aux);
 
+//printf("%d %.1F %.1F\n", aux.t, aux.T -273, final.T -10 -273);
+
 		if (aux.T >= final.T - 10) {
 
 			soaking.T = aux.T;
@@ -468,10 +505,42 @@ int buscarSoaking (TListaSimple * lista) {
 
 	}
 
-	printf("\nSk = %d +/- 1 minutos\n", (int) soaking.t / 60);
+	char * auxSk = segAMinutos(final.t - soaking.t);
 
-	if ((aux.t != soaking.t) || (aux.T != soaking.T) || (retorno != TRUE))
+	printf("\nSk = %s ± 1 minuto\n", auxSk);
+
+	free(auxSk);
+
+	return soaking.t;
+
+}
+
+double buscarTsk (int Sk, TListaSimple * lista) {
+
+	if ((L_Vacia(* lista) == TRUE) || (Sk == FALSE))
 		return FALSE;
+
+	int retorno = TRUE;
+
+	struct elementoLista aux;
+	L_Elem_Cte(* lista, & aux);
+
+	if (aux.t != Sk) {
+
+		retorno = L_Mover_Cte(lista, L_Primero);
+
+		while (retorno == TRUE) {
+
+			L_Elem_Cte(* lista, & aux);
+
+			if (aux.t == Sk)
+				break;
+
+			retorno = L_Mover_Cte(lista, L_Siguiente);
+
+		}
+
+	}
 
 	int n = 0;
 	double Tsk = 0;
@@ -487,7 +556,7 @@ int buscarSoaking (TListaSimple * lista) {
 
 	}
 
-	printf("\nTsk = %.3F +/-  ºK\n", (Tsk / n) - 273); //TODO
+	printf("\nTsk = %.3F ±  ºK\n", (Tsk / n) - 273); //TODO
 
 	return TRUE;
 
@@ -515,20 +584,21 @@ void resolverConveccionYRadiaccion (struct vectorDatos datos) {
 
 	imprimirLista(lista);
 
-	buscarSoaking(& lista);
+	int Sk = buscarSk(& lista);
+	buscarTsk(Sk, & lista);
 
 	L_Vaciar(& lista);
 
 }
 
-void buscarManualmenteT1YT2 (struct vectorDatos datos) {
+void buscarManualmenteT1YT2 (struct vectorDatos d) {
 
-	printf("Pruebo con T1 = 536 ºC y T2 = 489 ºC\n");
+	d.temperaturaUno = 724 + 273;
+	d.temperaturaDos = 635 + 273;
 
-	datos.temperaturaUno = 536 + 273;
-	datos.temperaturaDos = 489 + 273;
+	printf("Pruebo con T1 = %d ºC y T2 = %d ºC\n", d.temperaturaUno - 273, d.temperaturaDos - 273);
 
-	resolverConveccionYRadiaccion(datos);
+	resolverConveccionYRadiaccion(d);
 
 }
 
@@ -545,7 +615,7 @@ int proceso () {
 	imprimirEnunciado(3);
 	buscarManualmenteT1YT2(datos);
 
-	//imprimirEnunciado(4);
+	imprimirEnunciado(4);
 
 
 	return TRUE;

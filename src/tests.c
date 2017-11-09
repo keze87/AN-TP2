@@ -13,16 +13,16 @@ TEST testCargarDatos (void) {
 	GREATEST_ASSERT_EQ(aux.longitudTubo,			12);
 	GREATEST_ASSERT_EQ(aux.longitudHorno,			50);
 	GREATEST_ASSERT_EQ(aux.bolsillos,				50);
-	GREATEST_ASSERT_EQ(aux.cadencia,				35);
-	GREATEST_ASSERT_EQ(aux.temperaturaUno,			500 + 273);
-	GREATEST_ASSERT_EQ(aux.temperaturaDos,			500 + 273);
+	GREATEST_ASSERT_EQ(aux.cadencia,				28);
+	GREATEST_ASSERT_EQ(aux.temperaturaUno,			649 + 273);
+	GREATEST_ASSERT_EQ(aux.temperaturaDos,			649 + 273);
 	GREATEST_ASSERT_EQ(aux.coeficienteConveccion,	20);
 	GREATEST_ASSERT_IN_RANGE(aux.factorEmisividad,	0.85, 0.0001);
 
-	GREATEST_ASSERT_IN_RANGE(aux.masa,			944.65123, 0.00003);
-	GREATEST_ASSERT_IN_RANGE(aux.superficie,	17.4099026, 0.000001);
-	GREATEST_ASSERT_IN_RANGE(aux.velocidad,		(float) 1 / 35, 0.000000001);
-	GREATEST_ASSERT_EQ(aux.tiempoEnElHorno,		1750);
+	GREATEST_ASSERT_IN_RANGE(aux.masa,			944.65123, 0.0001);
+	GREATEST_ASSERT_IN_RANGE(aux.superficie,	9.21667886, 0.0001);
+	GREATEST_ASSERT_IN_RANGE(aux.velocidad,		(float) 1 / 28, 0.0001);
+	GREATEST_ASSERT_EQ(aux.tiempoEnElHorno,		1400);
 
 	PASS();
 
@@ -41,7 +41,7 @@ TEST testEulerConveccion (void) {
 
 	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
 
-	euler(fConveccion, &lista, 1 /* h */, datos);
+	euler(fConveccion, & lista, datos.cadencia /* h */, datos);
 
 	GREATEST_ASSERT(L_Vacia(lista) == FALSE);
 
@@ -51,15 +51,15 @@ TEST testEulerConveccion (void) {
 
 		struct elementoLista elem;
 
-		L_Elem_Cte(lista, &elem);
+		L_Elem_Cte(lista, & elem);
 
-		GREATEST_ASSERT_IN_RANGE(elem.T, solucionAnalitica(elem.t, datos), 0.1);
+		GREATEST_ASSERT_IN_RANGE(elem.T, solucionAnalitica(elem.t, datos), 2.6);
 
-		retorno = L_Mover_Cte(&lista, L_Siguiente);
+		retorno = L_Mover_Cte(& lista, L_Siguiente);
 
 	}
 
-	L_Vaciar(&lista);
+	L_Vaciar(& lista);
 
 	PASS();
 
@@ -71,19 +71,19 @@ TEST testRKConveccion (void) {
 
 	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
 
-	rungeKutta(fConveccion, &lista, 1 /* h */, datos);
+	rungeKutta(fConveccion, & lista, datos.cadencia /* h */, datos);
 
 	GREATEST_ASSERT(L_Vacia(lista) == FALSE);
 
-	int retorno = L_Mover_Cte(&lista, L_Primero);
+	int retorno = L_Mover_Cte(& lista, L_Primero);
 
 	while (retorno == TRUE) {
 
 		struct elementoLista elem;
 
-		L_Elem_Cte(lista, &elem);
+		L_Elem_Cte(lista, & elem);
 
-		GREATEST_ASSERT_IN_RANGE(elem.T, solucionAnalitica(elem.t, datos), 0.00000000001);
+		GREATEST_ASSERT_IN_RANGE(elem.T, solucionAnalitica(elem.t, datos), 0.000001);
 
 		retorno = L_Mover_Cte(&lista, L_Siguiente);
 
