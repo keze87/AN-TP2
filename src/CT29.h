@@ -29,8 +29,8 @@ struct vectorDatos {
 
 	// Parámetros de proceso
 	int cadencia;
-	int temperaturaUno;
-	int temperaturaDos;
+	double temperaturaUno;
+	double temperaturaDos;
 
 	// Parámetros de la transferencia de calor
 	int coeficienteConveccion;

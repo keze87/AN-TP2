@@ -53,7 +53,7 @@ TEST testEulerConveccion (void) {
 
 		L_Elem_Cte(lista, & elem);
 
-		GREATEST_ASSERT_IN_RANGE(elem.T, solucionAnalitica(elem.t, datos), 2.6);
+		GREATEST_ASSERT_IN_RANGE(elem.T, solucionAnalitica(elem.t, datos), 1.2);
 
 		retorno = L_Mover_Cte(& lista, L_Siguiente);
 
@@ -83,7 +83,7 @@ TEST testRKConveccion (void) {
 
 		L_Elem_Cte(lista, & elem);
 
-		GREATEST_ASSERT_IN_RANGE(elem.T, solucionAnalitica(elem.t, datos), 0.000001);
+		GREATEST_ASSERT_IN_RANGE(elem.T, solucionAnalitica(elem.t, datos), 0.0000001);
 
 		retorno = L_Mover_Cte(&lista, L_Siguiente);
 
