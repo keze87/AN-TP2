@@ -459,7 +459,7 @@ double fConveccionRadiaccion (float t, double Tn, struct vectorDatos d /* datos 
 
 }
 
-int buscarSk (TListaSimple * lista) {
+int buscarSk (TListaSimple * lista, short quiet) {
 
 	if (L_Vacia(* lista) == TRUE)
 		return FALSE;
@@ -501,17 +501,21 @@ int buscarSk (TListaSimple * lista) {
 
 	}
 
-	char * auxSk = segAMinutos(final.t - soaking.t);
+	if (quiet != TRUE) {
 
-	printf("\nSk = %s ± 1 minuto\n", auxSk);
+		char * auxSk = segAMinutos(final.t - soaking.t);
 
-	free(auxSk);
+		printf("\nSk = %s ± 1 minuto\n", auxSk);
+
+		free(auxSk);
+
+	}
 
 	return final.t - soaking.t;
 
 }
 
-double buscarTsk (int Sk, TListaSimple * lista) {
+double buscarTsk (int Sk, TListaSimple * lista, short quiet) {
 
 	if ((L_Vacia(* lista) == TRUE) || (Sk == FALSE))
 		return FALSE;
@@ -555,7 +559,8 @@ double buscarTsk (int Sk, TListaSimple * lista) {
 
 	Tsk = Tsk / n;
 
-	printf("\nTsk = %.3F ±  ºK\n", Tsk - 273); //TODO
+	if (quiet != TRUE)
+		printf("\nTsk = %.3F ±  ºK\n", Tsk - 273); //TODO
 
 	return Tsk;
 
@@ -577,8 +582,8 @@ void resolverConveccionYRadiaccion (struct vectorDatos datos) {
 
 	imprimirLista(lista);
 
-	int Sk = buscarSk(& lista);
-	buscarTsk(Sk, & lista);
+	int Sk = buscarSk(& lista, FALSE);
+	buscarTsk(Sk, & lista, FALSE);
 
 	L_Vaciar(& lista);
 
@@ -595,21 +600,24 @@ void buscarManualmenteT1YT2 (struct vectorDatos d) {
 
 }
 
-void buscarT1YT2 () {
+// skobj [segundos] y tskobj [ºK] ambos positivos
+void buscarT1YT2 (int skobj, float tskobj) {
+
+	printf("\n              %d y %.2F\n", skobj, tskobj);
 
 	int n = 0;
 
 	double T1n1;
 	double T2n1;
 
-	double T1n = 724 + 273;
-	double T2n = 635 + 273;
+	double T1n = 630 + 273;
+	double T2n = 630 + 273;
 
 	TListaSimple lista;
 
 	struct vectorDatos datos = cargarVectorDatos();
 
-	int h = datos.cadencia / 2;
+	int h = 1; // datos.cadencia / 2;
 
 	while (n < 100) {
 
@@ -620,11 +628,11 @@ void buscarT1YT2 () {
 		rungeKutta(fConveccionRadiaccion, & lista, h, datos);
 
 printf("\n%F %F", T1n, T2n);
-		int f1 = buscarSk(& lista);
-		double f2 = buscarTsk(f1, & lista);
+		int f1 = buscarSk(& lista, FALSE);
+		double f2 = buscarTsk(f1, & lista, FALSE);
 
-		T1n1 = T1n + 0.5 * (f1 - 600) - 1.5 * (f2 - (630 + 273));
-		T2n1 = T2n - 1.5 * (f1 - 600) + 0.5 * (f2 - (630 + 273));
+		T1n1 = T1n - 0.1 * (f1 - skobj) - 0.01 * (f2 - tskobj);
+		T2n1 = T2n - 0.01 * (f1 - skobj) - 0.1 * (f2 - tskobj);
 
 		T1n = T1n1;
 		T2n = T2n1;
@@ -653,7 +661,10 @@ int proceso () {
 	buscarManualmenteT1YT2(datos);
 
 	imprimirEnunciado(4);
-	buscarT1YT2();
+	buscarT1YT2(600, 630 + 273);
+	buscarT1YT2(600, round((float) 100 / 10000 * (NUMERODEPADRON - 90000) + 550) + 273);
+	buscarT1YT2(600, round((float) 100 / 10000 * (NUMERODEPADRON - 90000) + 600) + 273);
+
 
 	return TRUE;
 
