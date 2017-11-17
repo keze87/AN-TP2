@@ -276,6 +276,89 @@ struct vectorDatos cargarVectorDatos () {
 
 }
 
+// Devuelve un string del número redondeado
+char * redondear (double numero, short cifrasSig) {
+
+	char * aux = malloc(sizeof(char) * 31);
+	char * auxInteger = malloc(sizeof(char) * 31);
+	char auxModulo[30];
+
+	long entero = round(numero);
+
+	snprintf(auxInteger, 30, "%li", entero);
+	snprintf(auxModulo, 30, "%li", labs(entero));
+
+	// Si es mayor o igual (en modulo) a 100 devuelvo solo la parte entera
+	// Sino devuelvo un decimal o 2
+	if (strlen(auxModulo) >= cifrasSig) {
+
+		free(aux);
+
+		return auxInteger;
+
+	} else {
+
+		char formato[10];
+		char cantDecimales[10];
+
+		sprintf(cantDecimales, "%d", cifrasSig - (int) strlen(auxModulo));
+
+		strcpy(formato, "%.");
+		strcat(formato, cantDecimales);
+		strcat(formato, "f");
+
+		snprintf(aux, 30, formato, numero);
+
+	}
+
+	free(auxInteger);
+
+	return aux;
+
+}
+
+// PRE: decimales después del punto
+char * incerteza (char * raiz) {
+
+	char * punteroADecimalDespuesDePunto = NULL;
+	char * retorno = malloc(sizeof(char) * 30);
+	int cantidadDeDecimales;
+
+	// el puntero es igual a la posición de memoria del caracter después del punto
+	// "123.456" -> "456"
+	for (int i = 0; i < strlen(raiz); i++) {
+
+		if (raiz[i] == '.') {
+
+			punteroADecimalDespuesDePunto = raiz + i + 1;
+
+			break;
+
+		}
+
+	}
+
+	if (punteroADecimalDespuesDePunto == NULL) {
+
+		strcpy(retorno, "1");
+
+		return retorno;
+
+	}
+
+	cantidadDeDecimales = strlen(punteroADecimalDespuesDePunto);
+
+	strcpy(retorno, "0.");
+
+	for (int j = 1; j < cantidadDeDecimales; j++)
+		strcat(retorno,"0");
+
+	strcat(retorno,"1");
+
+	return retorno;
+
+}
+
 int buscarEstabilidad (struct vectorDatos datos) {
 
 	return datos.cadencia; // WONTFIX
@@ -357,8 +440,13 @@ char * segAMinutos (int segundos) {
 
 	char * retorno = malloc(sizeof(char) * (10 + strlen(auxM) + strlen(auxR)));
 
-	strcpy(retorno, auxM);
-	strcat(retorno, " min ");
+	strcpy(retorno, "");
+
+	if (minutos < 10)
+		strcat(retorno, " ");
+
+	strcat(retorno, auxM);
+	strcat(retorno, " m ");
 
 	if (resto < 10)
 		strcat(retorno, " ");
@@ -384,10 +472,12 @@ void imprimirLista (TListaSimple lista) {
 			L_Elem_Cte(lista, & elem);
 
 			char * auxTiempo = segAMinutos(elem.t);
+			char * auxTemp = redondear(elem.T - 273, 4);
+			char * auxError = incerteza(auxTemp);
 
-			printf("T(%s) = %.3F\n", auxTiempo, elem.T - 273);
+			printf("T(%s) = %s ± %s ºC\n", auxTiempo, auxTemp, auxError);
 
-			free(auxTiempo);
+			free(auxTiempo); free(auxTemp); free(auxError);
 
 			retorno = L_Mover_Cte(&lista, L_Siguiente);
 
@@ -505,7 +595,7 @@ int buscarSk (TListaSimple * lista, short quiet) {
 
 		char * auxSk = segAMinutos(final.t - soaking.t);
 
-		printf("\nSk = %s ± 1 minuto\n", auxSk);
+		printf("\nSk = %s\n", auxSk);
 
 		free(auxSk);
 
@@ -559,8 +649,16 @@ double buscarTsk (int Sk, TListaSimple * lista, short quiet) {
 
 	Tsk = Tsk / n;
 
-	if (quiet != TRUE)
-		printf("\nTsk = %.3F ±  ºK\n", Tsk - 273); //TODO
+	if (quiet != TRUE) {
+
+		char * auxRedondeo = redondear(Tsk - 273, 4);
+		char * auxError = incerteza(auxRedondeo);
+
+		printf("\nTsk = %s ± %s ºC\n", auxRedondeo, auxError);
+
+		free(auxRedondeo); free(auxError);
+
+	}
 
 	return Tsk;
 
@@ -601,9 +699,11 @@ void buscarManualmenteT1YT2 (struct vectorDatos d) {
 }
 
 // skobj [segundos] y tskobj [ºK] ambos positivos
-void buscarT1YT2 (int skobj, float tskobj) {
+void buscarT1YT2 (int skobj, int tskobj) {
 
-	printf("\n              %d y %.2F\n", skobj, tskobj);
+	char * aux = segAMinutos(skobj);
+	printf("*) Skobj = %s, Tskobj = %d ºC\n", aux, tskobj - 273);
+	free(aux);
 
 	int n = 0;
 
@@ -617,7 +717,10 @@ void buscarT1YT2 (int skobj, float tskobj) {
 
 	struct vectorDatos datos = cargarVectorDatos();
 
-	int h = 1; // datos.cadencia / 2;
+	int h = datos.cadencia / 2;
+
+	int f1menos1;
+	int f1 = -22222;
 
 	while (n < 100) {
 
@@ -627,9 +730,14 @@ void buscarT1YT2 (int skobj, float tskobj) {
 
 		rungeKutta(fConveccionRadiaccion, & lista, h, datos);
 
-printf("\n%F %F", T1n, T2n);
-		int f1 = buscarSk(& lista, FALSE);
-		double f2 = buscarTsk(f1, & lista, FALSE);
+		f1menos1 = f1;
+		f1 = buscarSk(& lista, TRUE);
+		double f2 = buscarTsk(f1, & lista, TRUE);
+
+		L_Vaciar(& lista);
+
+		double T1n1menos1 = T1n1;
+		double T2n1menos1 = T2n1;
 
 		T1n1 = T1n - 0.1 * (f1 - skobj) - 0.01 * (f2 - tskobj);
 		T2n1 = T2n - 0.01 * (f1 - skobj) - 0.1 * (f2 - tskobj);
@@ -637,13 +745,31 @@ printf("\n%F %F", T1n, T2n);
 		T1n = T1n1;
 		T2n = T2n1;
 
-		n++;
+		// Solo necesario poque oscila con este jacobiano
+		if (abs(f1menos1 - skobj) < abs(f1 - skobj)) {
 
-		L_Vaciar(& lista);
+			T1n1 = T1n1menos1;
+			T2n1 = T2n1menos1;
+
+		}
+
+		n++;
 
 	}
 
-	printf("\n%F %F\n", T1n1, T2n1);
+	char * auxRedondeo = redondear(T1n1 - 273, 3);
+	char * auxError = incerteza(auxRedondeo);
+
+	printf("\nT1 = %s ± %s ºC", auxRedondeo, auxError);
+
+	free(auxRedondeo); free(auxError);
+
+	auxRedondeo = redondear(T2n1 - 273, 3);
+	auxError = incerteza(auxRedondeo);
+
+	printf(", T2 = %s ± %s ºC\n\n", auxRedondeo, auxError);
+
+	free(auxRedondeo); free(auxError);
 
 }
 
