@@ -792,9 +792,6 @@ void buscarT1YT2 (int skobj, int tskobj) {
 
 	int h = datos.cadencia / 2;
 
-	double f2menos1;
-	double f2 = -22222;
-
 	while (n < 100) {
 
 		L_Vaciar(& lista);
@@ -806,25 +803,13 @@ void buscarT1YT2 (int skobj, int tskobj) {
 		rungeKutta(fConveccionRadiaccion, & lista, h, datos);
 
 		int f1 = buscarSk(& lista, TRUE);
-		f2menos1 = f2;
-		f2 = buscarTsk(f1, & lista, TRUE);
-
-		double T1n1menos1 = T1n1;
-		double T2n1menos1 = T2n1;
+		double f2 = buscarTsk(f1, & lista, TRUE);
 
 		T1n1 = T1n - 0.1 * (f1 - skobj) - 0.01 * (f2 - tskobj);
 		T2n1 = T2n - 0.01 * (f1 - skobj) - 0.1 * (f2 - tskobj);
 
 		T1n = T1n1;
 		T2n = T2n1;
-
-		// Solo necesario poque oscila con este jacobiano
-		if (fabs(f2menos1 - tskobj) < fabs(f2 - tskobj)) {
-
-			T1n1 = T1n1menos1;
-			T2n1 = T2n1menos1;
-
-		}
 
 		n++;
 
