@@ -36,7 +36,7 @@ void imprimirEnunciado (short enunciado) {
 			printf("\n2) Resolver nuevamente el ítem 1 incorporando el término de intercambio radiativo.\n");
 			printf("   a) Seleccionar el método que considere más adecuado de acuerdo a los resultados del ítem 1.\n");
 			printf("   c) A partir de la evolución temporal obtenida en 2a) calcular los siguientes parámetros de salida del proceso:\n");
-			printf("   Sk (Soaking) y Tsk (Temperatura promedio durante el soaking).\n\n");
+			printf("   Sk (Soaking) y Tsk (Temperatura promedio durante el soaking).\n");
 			break;
 
 		case 3:
@@ -618,8 +618,7 @@ int buscarSk (TListaSimple * lista, short quiet) {
 	L_Elem_Cte(* lista, & final);
 
 	// Empiezo a recorrer la lista
-	struct elementoLista soaking;
-	struct elementoLista aux;
+	struct elementoLista soaking, aux;
 
 	retorno = L_Mover_Cte(lista, L_Anterior);
 
@@ -632,14 +631,8 @@ int buscarSk (TListaSimple * lista, short quiet) {
 			soaking.T = aux.T;
 			soaking.t = aux.t;
 
-		} else {
-
-			retorno = L_Mover_Cte(lista, L_Siguiente); // Pongo el cte en Sk
-			L_Elem_Cte(* lista, & aux);
-
+		} else
 			break;
-
-		}
 
 		retorno = L_Mover_Cte(lista, L_Anterior);
 
@@ -659,31 +652,31 @@ int buscarSk (TListaSimple * lista, short quiet) {
 
 }
 
-double buscarTsk (int Sk, TListaSimple * lista, short quiet) {
+double buscarTsk (int tiempoDeSk, TListaSimple * lista, short quiet) {
 
-	if ((L_Vacia(* lista) == TRUE) || (Sk == FALSE))
+	if ((L_Vacia(* lista) == TRUE) || (tiempoDeSk == FALSE))
 		return FALSE;
 
+	// Busco el tiempo final
 	int retorno = TRUE;
+	while (retorno == TRUE)
+		retorno = L_Mover_Cte(lista, L_Siguiente);
 
-	struct elementoLista aux;
-	L_Elem_Cte(* lista, & aux);
+	struct elementoLista aux, final;
+	L_Elem_Cte(* lista, & final);
 
-	// Me aseguro que el corriente está en el sk
-	if (aux.t != Sk) {
+	int Sk = final.t - tiempoDeSk;
 
-		retorno = L_Mover_Cte(lista, L_Primero);
+	// Muevo el corriente al sk
+	retorno = L_Mover_Cte(lista, L_Primero);
+	while (retorno == TRUE) {
 
-		while (retorno == TRUE) {
+		L_Elem_Cte(* lista, & aux);
 
-			L_Elem_Cte(* lista, & aux);
+		if (aux.t == Sk)
+			break;
 
-			if (aux.t == Sk)
-				break;
-
-			retorno = L_Mover_Cte(lista, L_Siguiente);
-
-		}
+		retorno = L_Mover_Cte(lista, L_Siguiente);
 
 	}
 
@@ -708,7 +701,7 @@ double buscarTsk (int Sk, TListaSimple * lista, short quiet) {
 		char * auxRedondeo = redondear(Tsk - 273, 4);
 		char * auxError = incerteza(auxRedondeo);
 
-		printf("\nTsk = %s ± %s ºC\n", auxRedondeo, auxError);
+		printf("Tsk = %s ± %s ºC\n", auxRedondeo, auxError);
 
 		free(auxRedondeo); free(auxError);
 
@@ -736,8 +729,6 @@ void resolverConveccion (struct vectorDatos datos) {
 	printf("\nMétodo de Runge Kutta:\n\n");
 
 	lista = crearListaVI(datos.temperaturaInicial);
-
-	h = buscarEstabilidad(datos);
 
 	rungeKutta(fConveccion, & lista, h, datos);
 
@@ -790,8 +781,7 @@ void buscarT1YT2 (int skobj, int tskobj) {
 
 	int n = 0;
 
-	double T1n1;
-	double T2n1;
+	double T1n1, T2n1;
 
 	double T1n = 630 + 273;
 	double T2n = 630 + 273;
@@ -807,6 +797,8 @@ void buscarT1YT2 (int skobj, int tskobj) {
 
 	while (n < 100) {
 
+		L_Vaciar(& lista);
+
 		datos.temperaturaUno = T1n;
 		datos.temperaturaDos = T2n;
 		lista = crearListaVI(datos.temperaturaInicial);
@@ -816,8 +808,6 @@ void buscarT1YT2 (int skobj, int tskobj) {
 		int f1 = buscarSk(& lista, TRUE);
 		f2menos1 = f2;
 		f2 = buscarTsk(f1, & lista, TRUE);
-
-		L_Vaciar(& lista);
 
 		double T1n1menos1 = T1n1;
 		double T2n1menos1 = T2n1;
@@ -850,9 +840,14 @@ void buscarT1YT2 (int skobj, int tskobj) {
 	auxRedondeo = redondear(T2n1 - 273, 3);
 	auxError = incerteza(auxRedondeo);
 
-	printf(", T2 = %s ± %s ºC\n\n", auxRedondeo, auxError);
+	printf(", T2 = %s ± %s ºC\n", auxRedondeo, auxError);
 
 	free(auxRedondeo); free(auxError);
+
+	// Imprimir sk y tsk
+	buscarTsk(buscarSk(& lista, FALSE), & lista, FALSE);
+	printf("\n");
+	L_Vaciar(& lista);
 
 }
 
