@@ -1,3 +1,11 @@
+// César Ezequiel Herrera 97429
+// Numero de grupo: 29
+//
+// Repo con pruebas unitarias:
+// https://github.com/keze87/AN-TP2
+//
+// Make:
+// gcc -o CT29 CT29.c -lm -std=c11 -Wall -pedantic -pedantic-errors -I.
 
 #include "tests.h" // Pruebas Unitarias
 
@@ -14,6 +22,44 @@
 
 #define PI acos(-1.0)
 #define STEFANBOLTZMANN 0.000000056703
+
+void imprimirEnunciado (short enunciado) {
+
+	switch (enunciado) {
+
+		case 1:
+			printf("\n1) Resolver el modelo planteado considerando solamente el intercambio de calor por convección.\n");
+			printf("   Aplicar los métodos de Euler y Runge Kutta de orden 4 para una condición inicial T0=20°C y paso de tiempo h=cad.\n\n");
+			break;
+
+		case 2:
+			printf("\n2) Resolver nuevamente el ítem 1 incorporando el término de intercambio radiativo.\n");
+			printf("   a) Seleccionar el método que considere más adecuado de acuerdo a los resultados del ítem 1.\n");
+			printf("   c) A partir de la evolución temporal obtenida en 2a) calcular los siguientes parámetros de salida del proceso:\n");
+			printf("   Sk (Soaking) y Tsk (Temperatura promedio durante el soaking).\n\n");
+			break;
+
+		case 3:
+			printf("\n3) Encontrar manualmente una combinación de T1 y T2 para que el soaking sea de 10 minutos manteniendo\n");
+			printf("la temperatura objetivo Tsk obtenida en el ítem 2. La tolerancia para el soaking es de ±1min.\n\n");
+			break;
+
+		case 4:
+			printf("\n4) Automatizar la búsqueda manual del ítem 3 para encontrar valores de T1 y T2 que obtengan un Tsk y Sk predeterminados.\n\n");
+			break;
+
+		default :
+			printf("Error\n");
+
+	}
+
+}
+
+/*
+ *
+ * Cálculos auxiliares
+ *
+ */
 
 struct vectorDatos {
 
@@ -49,201 +95,6 @@ struct vectorDatos {
 
 };
 
-void imprimirEnunciado (short enunciado) {
-
-	switch (enunciado) {
-
-		case 1:
-			printf("\n1) Resolver el modelo planteado considerando solamente el intercambio de calor por convección.\n");
-			printf("   Aplicar los métodos de Euler y Runge Kutta de orden 4 para una condición inicial T0=20°C y paso de tiempo h=cad.\n\n");
-			break;
-
-		case 2:
-			printf("\n2) Resolver nuevamente el ítem 1 incorporando el término de intercambio radiativo.\n");
-			printf("   a) Seleccionar el método que considere más adecuado de acuerdo a los resultados del ítem 1.\n");
-			printf("   c) A partir de la evolución temporal obtenida en 2a) calcular los siguientes parámetros de salida del proceso:\n");
-			printf("   Sk (Soaking) y Tsk (Temperatura promedio durante el soaking).\n\n");
-			break;
-
-		case 3:
-			printf("\n3) Encontrar manualmente una combinación de T1 y T2 para que el soaking sea de 10 minutos manteniendo\n");
-			printf("la temperatura objetivo Tsk obtenida en el ítem 2. La tolerancia para el soaking es de ±1min.\n\n");
-			break;
-
-		case 4:
-			printf("\n4) Automatizar la búsqueda manual del ítem 3 para encontrar valores de T1 y T2 que obtengan un Tsk y Sk predeterminados.\n\n");
-			break;
-
-		default :
-			printf("Error\n");
-
-	}
-
-}
-
-struct elementoLista {
-
-	int t;
-	double T;
-
-};
-
-// https://github.com/fiuba-7541/elemental ?
-/*
- * Movimientos que va a manejar la estructura. Son de conocimiento público,
- * pero sólo deberían usarse para el manejo puntual de esta estructura.
- */
-typedef enum {
-
-	L_Primero,
-	L_Siguiente,
-	L_Anterior
-
-} TMovimiento_Ls;
-
-/*
- * Estructura auxiliar de la lista simple. Es privada y no debe usarse bajo
- * ningún concepto en la aplicación.
- */
-typedef struct TNodoListaSimple {
-
-	void * Elem;
-	struct TNodoListaSimple * Siguiente, * Anterior;
-
-} TNodoListaSimple;
-
-/**
- * Estructura cabecera, este es el tipo que se deberá instanciar, aunque
- * nunca acceder a sus campos.
- */
-typedef struct {
-
-	TNodoListaSimple * Primero, * Corriente;
-	int TamanioDato;
-
-} TListaSimple;
-
-void L_Crear (TListaSimple * pLs, int TamanioDato) {
-
-	pLs->Corriente = NULL;
-	pLs->Primero = NULL;
-	pLs->TamanioDato = TamanioDato;
-
-}
-
-void L_Vaciar (TListaSimple * pLs) {
-
-	TNodoListaSimple * pNodo, * Siguiente;
-
-	for(pNodo = pLs->Primero; (pNodo); pNodo = Siguiente) {
-
-		Siguiente = pNodo->Siguiente;
-
-		free(pNodo->Elem);
-		free(pNodo);
-
-	}
-
-	pLs->Primero = pLs->Corriente = NULL;
-
-}
-
-int L_Vacia (TListaSimple Ls) {
-
-	if (Ls.Primero == NULL)
-		return TRUE;
-
-	return FALSE;
-
-}
-
-void L_Elem_Cte (TListaSimple Ls, void * pE) {
-
-	memcpy(pE, Ls.Corriente->Elem, Ls.TamanioDato);
-
-}
-
-int L_Mover_Cte (TListaSimple * pLs, TMovimiento_Ls M) {
-
-	switch (M) {
-
-		case L_Primero:
-			pLs->Corriente = pLs->Primero;
-			break;
-
-		case L_Siguiente:
-			if (pLs->Corriente->Siguiente == NULL)
-				return FALSE;
-			else
-				pLs->Corriente = pLs->Corriente->Siguiente;
-			break;
-
-		case L_Anterior:
-			if (pLs->Corriente->Anterior == NULL)
-				return FALSE;
-			else
-				pLs->Corriente = pLs->Corriente->Anterior;
-			break;
-
-	}
-
-	return TRUE;
-
-}
-
-int L_Insertar_Cte (TListaSimple * pLs, TMovimiento_Ls M, void * pE) {
-
-	TNodoListaSimple * pNodo = (TNodoListaSimple *) malloc(sizeof(TNodoListaSimple));
-
-	if (!pNodo)
-		return FALSE; // No hay memoria disponible
-
-	pNodo->Elem = malloc(pLs->TamanioDato);
-
-	if (!pNodo->Elem) {
-
-		free(pNodo);
-
-		return FALSE;
-
-	}
-
-	memcpy(pNodo->Elem, pE, pLs->TamanioDato);
-
-	if ((pLs->Primero == NULL) || (M == L_Primero) || ((M == L_Anterior) && (pLs->Primero == pLs->Corriente))) {
-
-		/*Si está vacía o hay que insertar en el Primero o
-		hay que insertar en el Anterior y el actual es el Primero */
-		pNodo->Siguiente = pLs->Primero;
-		if (pLs->Primero != NULL)
-			pLs->Primero->Anterior = pNodo;
-		pLs->Primero = pLs->Corriente = pNodo;
-
-	} else {
-
-		// Siempre inserto como siguiente, el nodo nuevo, porque es más fácil
-		pNodo->Siguiente = pLs->Corriente->Siguiente;
-		pNodo->Anterior = pLs->Corriente;
-		if (pLs->Corriente->Siguiente != NULL)
-			pLs->Corriente->Siguiente->Anterior = pNodo;
-		pLs->Corriente->Siguiente = pNodo;
-
-		if (M == L_Anterior) {
-
-			// Pero cuando el movimiento es Anterior, entonces swapeo los elementos
-			void * tmp = pNodo->Elem;
-			pNodo->Elem = pLs->Corriente->Elem;
-			pLs->Corriente->Elem = tmp;
-
-		}
-
-	}
-
-	pLs->Corriente = pNodo;
-
-	return TRUE;
-
-}
 
 struct vectorDatos cargarVectorDatos () {
 
@@ -276,6 +127,12 @@ struct vectorDatos cargarVectorDatos () {
 
 }
 
+int buscarEstabilidad (struct vectorDatos datos) {
+
+	return datos.cadencia; // WONTFIX
+
+}
+
 // Devuelve un string del número redondeado
 char * redondear (double numero, short cifrasSig) {
 
@@ -298,6 +155,7 @@ char * redondear (double numero, short cifrasSig) {
 
 	} else {
 
+		// ejemplo: formato = "%.5f"
 		char formato[10];
 		char cantDecimales[10];
 
@@ -359,74 +217,7 @@ char * incerteza (char * raiz) {
 
 }
 
-int buscarEstabilidad (struct vectorDatos datos) {
-
-	return datos.cadencia; // WONTFIX
-
-}
-
-double fConveccion (float t, double Tn, struct vectorDatos d /* datos */) {
-
-	int Tinfinito;
-
-	if (t * d.velocidad > d.longitudHorno / 2)
-
-		Tinfinito = d.temperaturaDos;
-
-	else
-
-		Tinfinito = d.temperaturaUno;
-
-	return - d.coeficienteConveccion * d.superficie * (Tn - Tinfinito) / (d.masa * d.calorEspecifico);
-
-}
-
-// PRE: Lista no vacia
-void euler (double (* funcion)(float, double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
-
-	struct elementoLista n;
-	L_Elem_Cte(* lista, &n);
-
-	while (n.t < datos.tiempoEnElHorno) {
-
-		struct elementoLista n1;
-		n1.t = n.t + h;
-		n1.T = n.T + h * funcion(n.t, n.T, datos);
-
-		L_Insertar_Cte(lista, L_Siguiente, & n1);
-
-		n.t = n1.t;
-		n.T = n1.T;
-
-	}
-
-}
-
-void rungeKutta (double (* funcion)(float, double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
-
-	struct elementoLista n;
-	L_Elem_Cte(* lista, & n);
-
-	while (n.t < datos.tiempoEnElHorno) {
-
-		double k1 = funcion(n.t, n.T,								datos);
-		double k2 = funcion((float) n.t + h / 2, n.T + h * k1 / 2,	datos);
-		double k3 = funcion((float) n.t + h / 2, n.T + h * k2 / 2,	datos);
-		double k4 = funcion((float) n.t + h, n.T + h * k3,			datos);
-
-		struct elementoLista n1;
-		n1.t = n.t + h;
-		n1.T = n.T + h * (k1 / 6 + k2 / 3 + k3 / 3 + k4 / 6);
-
-		L_Insertar_Cte(lista, L_Siguiente, &n1);
-
-		n.t = n1.t;
-		n.T = n1.T;
-
-	}
-
-}
-
+// segAMinutos(60) -> 1 m 0 s
 char * segAMinutos (int segundos) {
 
 	char auxM[40];
@@ -459,34 +250,216 @@ char * segAMinutos (int segundos) {
 
 }
 
-void imprimirLista (TListaSimple lista) {
+/*
+ *
+ * Manejo de lista
+ *
+ */
 
-	if (L_Vacia(lista) == FALSE) {
+struct elementoLista {
 
-		int retorno = L_Mover_Cte(& lista, L_Primero);
+	int t;		// Tiempo
+	double T;	// Temperatura
 
-		struct elementoLista elem;
+};
 
-		while (retorno == TRUE) {
+// https://github.com/fiuba-7541/elemental ?
+/*
+ * Movimientos que va a manejar la estructura. Son de conocimiento público,
+ * pero sólo deberían usarse para el manejo puntual de esta estructura.
+ */
+typedef enum {
 
-			L_Elem_Cte(lista, & elem);
+	L_Primero,
+	L_Siguiente,
+	L_Anterior
 
-			char * auxTiempo = segAMinutos(elem.t);
-			char * auxTemp = redondear(elem.T - 273, 4);
-			char * auxError = incerteza(auxTemp);
+} TMovimiento_Ls;
 
-			printf("T(%s) = %s ± %s ºC\n", auxTiempo, auxTemp, auxError);
+/*
+ * Estructura auxiliar de la lista simple. Es privada y no debe usarse bajo
+ * ningún concepto en la aplicación.
+ */
+typedef struct TNodoListaSimple {
 
-			free(auxTiempo); free(auxTemp); free(auxError);
+	void * Elem;
+	struct TNodoListaSimple * Siguiente, * Anterior;
 
-			retorno = L_Mover_Cte(&lista, L_Siguiente);
+} TNodoListaSimple;
+
+/**
+ * Estructura cabecera, este es el tipo que se deberá instanciar, aunque
+ * nunca acceder a sus campos.
+ */
+typedef struct {
+
+	TNodoListaSimple * Primero, * Corriente;
+	int TamanioDato;
+
+} TListaSimple;
+
+/**
+ * L_CREAR
+ * Pre: Ls no fue creada.
+ * Post: Ls creada y vacia
+ */
+void L_Crear (TListaSimple * pLs, int TamanioDato) {
+
+	pLs->Corriente = NULL;
+	pLs->Primero = NULL;
+	pLs->TamanioDato = TamanioDato;
+
+}
+
+/**
+ * L_VACIAR
+ * Pre: Ls creada.
+ * Post: Ls vacia.
+ */
+void L_Vaciar (TListaSimple * pLs) {
+
+	TNodoListaSimple * pNodo, * Siguiente;
+
+	for(pNodo = pLs->Primero; (pNodo); pNodo = Siguiente) {
+
+		Siguiente = pNodo->Siguiente;
+
+		free(pNodo->Elem);
+		free(pNodo);
+
+	}
+
+	pLs->Primero = pLs->Corriente = NULL;
+
+}
+
+/**
+ * L_VACIA
+ * Pre: Ls creada.
+ * Post: Si Ls tiene elementos devuelve FALSE sino TRUE.
+ */
+int L_Vacia (TListaSimple Ls) {
+
+	if (Ls.Primero == NULL)
+		return TRUE;
+
+	return FALSE;
+
+}
+
+/**
+ * L_ELEM_CTE
+ * Pre: Ls creada y no vacia.
+ * Post: Se devuelve en E el elemento Corriente de la lista.
+ */
+void L_Elem_Cte (TListaSimple Ls, void * pE) {
+
+	memcpy(pE, Ls.Corriente->Elem, Ls.TamanioDato);
+
+}
+
+/**
+ * L_MOVER_CTE
+ * Pre: Ls creada y no vacia.
+ * Post: Si Ls esta vacia, devuelve FALSE. Sino:
+ * Si M = L_Primero, el nuevo elemento Corriente es el Primero. Devuelve TRUE
+ * Si M = L_Siguiente, el nuevo elemento Corriente es el Siguiente al
+ * Corriente. Si estaba en el ultimo elemento, devuelve FALSE, sino TRUE.
+ * Si M = L_Anterior, el nuevo elemento Corriente es el Anterior al
+ * Corriente. Si estaba en el primer elemento, devuelve FALSE, sino TRUE.
+ */
+int L_Mover_Cte (TListaSimple * pLs, TMovimiento_Ls M) {
+
+	switch (M) {
+
+		case L_Primero:
+			pLs->Corriente = pLs->Primero;
+			break;
+
+		case L_Siguiente:
+			if (pLs->Corriente->Siguiente == NULL)
+				return FALSE;
+			else
+				pLs->Corriente = pLs->Corriente->Siguiente;
+			break;
+
+		case L_Anterior:
+			if (pLs->Corriente->Anterior == NULL)
+				return FALSE;
+			else
+				pLs->Corriente = pLs->Corriente->Anterior;
+			break;
+
+	}
+
+	return TRUE;
+
+}
+
+/**
+ * L_INSERTAR_CTE
+ * Pre: Ls creada.
+ * Post: E se agrego a la lista y es el actual elemento Corriente.
+ * Si M=L_Primero: se inserto como Primero de la lista.
+ * Si M=L_Siguiente: se inserto despues del elemento Corriente.
+ * Si M=L_Anterior: se inserto antes del elemento Corriente.
+ * Si pudo insertar el elemento devuelve TRUE, sino FALSE.
+ */
+int L_Insertar_Cte (TListaSimple * pLs, TMovimiento_Ls M, void * pE) {
+
+	TNodoListaSimple * pNodo = (TNodoListaSimple *) malloc(sizeof(TNodoListaSimple));
+
+	if (!pNodo)
+		return FALSE; // No hay memoria disponible
+
+	pNodo->Elem = malloc(pLs->TamanioDato);
+
+	if (!pNodo->Elem) {
+
+		free(pNodo);
+
+		return FALSE;
+
+	}
+
+	memcpy(pNodo->Elem, pE, pLs->TamanioDato);
+
+	if ((pLs->Primero == NULL) || (M == L_Primero) || ((M == L_Anterior) && (pLs->Primero == pLs->Corriente))) {
+
+		/*Si está vacía o hay que insertar en el Primero o
+		hay que insertar en el Anterior y el actual es el Primero */
+		pNodo->Siguiente = pLs->Primero;
+		if (pLs->Primero != NULL)
+			pLs->Primero->Anterior = pNodo;
+		pLs->Primero = pLs->Corriente = pNodo;
+
+	} else {
+
+		// Siempre inserto como siguiente, el nodo nuevo, porque es más fácil
+		pNodo->Siguiente = pLs->Corriente->Siguiente;
+		pNodo->Anterior = pLs->Corriente;
+		if (pLs->Corriente->Siguiente != NULL)
+			pLs->Corriente->Siguiente->Anterior = pNodo;
+		pLs->Corriente->Siguiente = pNodo;
+
+		if (M == L_Anterior) {
+
+			// Pero cuando el movimiento es Anterior, entonces swapeo los elementos
+			void * tmp = pNodo->Elem;
+			pNodo->Elem = pLs->Corriente->Elem;
+			pLs->Corriente->Elem = tmp;
 
 		}
 
 	}
 
+	pLs->Corriente = pNodo;
+
+	return TRUE;
+
 }
 
+// Creo lista con elemento inicial T(0) = t0
 TListaSimple crearListaVI (double valorInicial) {
 
 	TListaSimple lista;
@@ -502,32 +475,54 @@ TListaSimple crearListaVI (double valorInicial) {
 
 }
 
-void resolverConveccion (struct vectorDatos datos) {
+// Imprime lista a pantalla
+void imprimirLista (TListaSimple lista) {
 
-	printf("Método de Euler:\n\n");
+	if (L_Vacia(lista) == FALSE) {
 
-	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
+		int retorno = L_Mover_Cte(& lista, L_Primero);
 
-	int h = buscarEstabilidad(datos);
+		struct elementoLista elem;
 
-	euler(fConveccion, & lista, h, datos);
+		while (retorno == TRUE) {
 
-	imprimirLista(lista);
+			L_Elem_Cte(lista, & elem);
 
-	L_Vaciar(& lista);
+			char * auxTiempo = segAMinutos(elem.t);
+			char * auxTemp = redondear(elem.T - 273, 3);
+			char * auxError = incerteza(auxTemp);
 
+			printf("T(%s) = %s ± %s ºC\n", auxTiempo, auxTemp, auxError);
 
-	printf("\nMétodo de Runge Kutta:\n\n");
+			free(auxTiempo); free(auxTemp); free(auxError);
 
-	lista = crearListaVI(datos.temperaturaInicial);
+			retorno = L_Mover_Cte(&lista, L_Siguiente);
 
-	h = buscarEstabilidad(datos);
+		}
 
-	rungeKutta(fConveccion, & lista, h, datos);
+	}
 
-	imprimirLista(lista);
+}
 
-	L_Vaciar(&lista);
+/*
+ *
+ * Funciones
+ *
+ */
+
+double fConveccion (float t, double Tn, struct vectorDatos d /* datos */) {
+
+	int Tinfinito;
+
+	if (t * d.velocidad > d.longitudHorno / 2)
+
+		Tinfinito = d.temperaturaDos;
+
+	else
+
+		Tinfinito = d.temperaturaUno;
+
+	return - d.coeficienteConveccion * d.superficie * (Tn - Tinfinito) / (d.masa * d.calorEspecifico);
 
 }
 
@@ -548,6 +543,65 @@ double fConveccionRadiaccion (float t, double Tn, struct vectorDatos d /* datos 
 			/ (- d.masa * d.calorEspecifico);
 
 }
+
+/*
+ *
+ * Métodos
+ *
+ */
+
+// PRE: Lista no vacia
+void euler (double (* funcion)(float, double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
+
+	struct elementoLista n;
+	L_Elem_Cte(* lista, &n);
+
+	while (n.t < datos.tiempoEnElHorno) {
+
+		struct elementoLista n1;
+		n1.t = n.t + h;
+		n1.T = n.T + h * funcion(n.t, n.T, datos);
+
+		L_Insertar_Cte(lista, L_Siguiente, & n1);
+
+		n.t = n1.t;
+		n.T = n1.T;
+
+	}
+
+}
+
+// PRE: Lista no vacia
+void rungeKutta (double (* funcion)(float, double, struct vectorDatos), TListaSimple * lista, int h, struct vectorDatos datos) {
+
+	struct elementoLista n;
+	L_Elem_Cte(* lista, & n);
+
+	while (n.t < datos.tiempoEnElHorno) {
+
+		double k1 = funcion(n.t, n.T,								datos);
+		double k2 = funcion((float) n.t + h / 2, n.T + h * k1 / 2,	datos);
+		double k3 = funcion((float) n.t + h / 2, n.T + h * k2 / 2,	datos);
+		double k4 = funcion((float) n.t + h, n.T + h * k3,			datos);
+
+		struct elementoLista n1;
+		n1.t = n.t + h;
+		n1.T = n.T + h * (k1 / 6 + k2 / 3 + k3 / 3 + k4 / 6);
+
+		L_Insertar_Cte(lista, L_Siguiente, &n1);
+
+		n.t = n1.t;
+		n.T = n1.T;
+
+	}
+
+}
+
+/*
+ *
+ * Main
+ *
+ */
 
 int buscarSk (TListaSimple * lista, short quiet) {
 
@@ -664,6 +718,35 @@ double buscarTsk (int Sk, TListaSimple * lista, short quiet) {
 
 }
 
+void resolverConveccion (struct vectorDatos datos) {
+
+	printf("Método de Euler:\n\n");
+
+	TListaSimple lista = crearListaVI(datos.temperaturaInicial);
+
+	int h = buscarEstabilidad(datos);
+
+	euler(fConveccion, & lista, h, datos);
+
+	imprimirLista(lista);
+
+	L_Vaciar(& lista);
+
+
+	printf("\nMétodo de Runge Kutta:\n\n");
+
+	lista = crearListaVI(datos.temperaturaInicial);
+
+	h = buscarEstabilidad(datos);
+
+	rungeKutta(fConveccion, & lista, h, datos);
+
+	imprimirLista(lista);
+
+	L_Vaciar(& lista);
+
+}
+
 void resolverConveccionYRadiaccion (struct vectorDatos datos) {
 
 	TListaSimple lista;
@@ -719,8 +802,8 @@ void buscarT1YT2 (int skobj, int tskobj) {
 
 	int h = datos.cadencia / 2;
 
-	int f1menos1;
-	int f1 = -22222;
+	double f2menos1;
+	double f2 = -22222;
 
 	while (n < 100) {
 
@@ -730,9 +813,9 @@ void buscarT1YT2 (int skobj, int tskobj) {
 
 		rungeKutta(fConveccionRadiaccion, & lista, h, datos);
 
-		f1menos1 = f1;
-		f1 = buscarSk(& lista, TRUE);
-		double f2 = buscarTsk(f1, & lista, TRUE);
+		int f1 = buscarSk(& lista, TRUE);
+		f2menos1 = f2;
+		f2 = buscarTsk(f1, & lista, TRUE);
 
 		L_Vaciar(& lista);
 
@@ -746,7 +829,7 @@ void buscarT1YT2 (int skobj, int tskobj) {
 		T2n = T2n1;
 
 		// Solo necesario poque oscila con este jacobiano
-		if (abs(f1menos1 - skobj) < abs(f1 - skobj)) {
+		if (fabs(f2menos1 - tskobj) < fabs(f2 - tskobj)) {
 
 			T1n1 = T1n1menos1;
 			T2n1 = T2n1menos1;
@@ -790,7 +873,6 @@ int proceso () {
 	buscarT1YT2(600, 630 + 273);
 	buscarT1YT2(600, round((float) 100 / 10000 * (NUMERODEPADRON - 90000) + 550) + 273);
 	buscarT1YT2(600, round((float) 100 / 10000 * (NUMERODEPADRON - 90000) + 600) + 273);
-
 
 	return TRUE;
 

@@ -73,7 +73,7 @@ typedef struct {
 
 } TListaSimple;
 
-int L_Vacia(TListaSimple Ls);
+int L_Vacia (TListaSimple Ls);
 void L_Elem_Cte (TListaSimple Ls, void * pE);
 int L_Mover_Cte (TListaSimple * pLs, TMovimiento_Ls M);
 void L_Vaciar (TListaSimple * pLs);
