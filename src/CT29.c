@@ -786,7 +786,7 @@ void buscarT1YT2 (int skobj, int tskobj) {
 	double T1n = 630 + 273;
 	double T2n = 630 + 273;
 
-	TListaSimple lista;
+	TListaSimple lista = crearListaVI(0);
 
 	struct vectorDatos datos = cargarVectorDatos();
 
